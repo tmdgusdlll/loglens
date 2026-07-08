@@ -6,7 +6,9 @@ import com.loglens.dedup.ErrorDeduplicator;
 import com.loglens.model.AnalysisOutcome;
 import com.loglens.model.ErrorRecord;
 import com.loglens.parser.StackTraceAggregator;
+import com.loglens.report.SlackNotifier;
 import com.loglens.report.TerminalReporter;
+import com.loglens.report.WebhookClient;
 import com.loglens.source.SourceContextResolver;
 import com.loglens.store.ErrorStore;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,12 +16,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +31,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ErrorPipelineTest {
+
+    private static final class RecordingWebhook implements WebhookClient {
+        final List<String> sent = new ArrayList<>();
+
+        @Override
+        public void post(String jsonPayload) throws IOException {
+            sent.add(jsonPayload);
+        }
+    }
 
     private static final Clock FIXED =
             Clock.fixed(Instant.parse("2026-07-07T03:00:00Z"), ZoneId.of("Asia/Seoul"));
@@ -115,5 +128,26 @@ class ErrorPipelineTest {
 
         assertDoesNotThrow(() -> failing.onChunk(TRACE));
         assertInstanceOf(AnalysisOutcome.Failed.class, store.snapshot().get(0).outcome());
+    }
+
+    @Test
+    void Slack알림이_설정되면_새_에러마다_정확히_한_번_전송된다() {
+        RecordingWebhook webhook = new RecordingWebhook();
+        GeminiApiClient stub = prompt -> {
+            apiCalls.incrementAndGet();
+            return VALID_JSON;
+        };
+        ErrorPipeline withSlack = new ErrorPipeline(
+                new StackTraceAggregator(FIXED),
+                new ErrorDeduplicator(),
+                new GeminiAnalyzer(stub, new SourceContextResolver(watchDir), FIXED),
+                store,
+                new TerminalReporter(new PrintStream(terminal, true, StandardCharsets.UTF_8)),
+                Optional.of(new SlackNotifier(webhook)));
+
+        withSlack.onChunk(TRACE);
+
+        assertEquals(1, webhook.sent.size());
+        assertTrue(webhook.sent.get(0).contains("java.lang.IllegalStateException"));
     }
 }

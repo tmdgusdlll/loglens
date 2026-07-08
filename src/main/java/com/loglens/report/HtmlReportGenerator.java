@@ -72,10 +72,10 @@ public class HtmlReportGenerator {
                     + "<b>제안:</b> " + escapeHtml(analyzed.result().suggestion());
         }
         if (outcome instanceof AnalysisOutcome.Skipped skipped) {
-            return "<span class=\"label\">[분석 건너뜀 - " + escapeHtml(skipped.reason()) + "]</span>";
+            return "<span class=\"label\">[AI 분석 건너뜀 - " + escapeHtml(skipped.reason()) + "]</span>";
         }
         if (outcome instanceof AnalysisOutcome.Failed failed) {
-            return "<span class=\"label\">[분석 실패 - " + escapeHtml(failed.reason()) + "]</span>";
+            return "<span class=\"label\">[AI 분석 실패 - " + escapeHtml(failed.reason()) + "]</span>";
         }
         throw new IllegalStateException("처리하지 않은 AnalysisOutcome 타입: " + outcome.getClass());
     }

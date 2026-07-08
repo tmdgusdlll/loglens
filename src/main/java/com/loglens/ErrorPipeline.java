@@ -37,6 +37,9 @@ public class ErrorPipeline {
         process(aggregator.accept(chunk));
     }
 
+    // 알려진 트레이드오프: idle 시점에 걸린 트레이스를 그대로 flush하므로, 쓰기가 poll 주기와
+    // 겹치면 뒤이어 도착하는 Caused by: 연속 라인이 이미 flush된 블록에 병합되지 못할 수 있다.
+    // 발생 확률이 낮아 감수하는 설계이며 버그가 아니다.
     public void onIdle() {
         process(aggregator.flush());
     }

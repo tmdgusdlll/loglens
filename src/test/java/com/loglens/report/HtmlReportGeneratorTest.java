@@ -47,7 +47,7 @@ class HtmlReportGeneratorTest {
                 new AnalysisOutcome.Skipped("일일 한도 초과 (쿨다운 중)"), 1);
 
         String html = HtmlReportGenerator.render(List.of(skipped));
-        assertTrue(html.contains("분석 건너뜀")); // ADR 0006: 쿨다운 중 기록도 리포트에서 확인
+        assertTrue(html.contains("AI 분석 건너뜀")); // ADR 0006: 쿨다운 중 기록도 리포트에서 확인, 터미널/Slack과 동일한 라벨
     }
 
     @Test
