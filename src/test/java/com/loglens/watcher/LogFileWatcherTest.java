@@ -128,4 +128,30 @@ class LogFileWatcherTest {
         append(logs.resolve("app.log"), "내용\n");
         assertTrue(watcher.poll().isEmpty()); // 탐색 성공 직후 삭제됨 → 예외 없이 빈 결과
     }
+
+    @Test
+    void 최초_poll_시_기존_파일_size_조회_전에_삭제되면_예외_없이_재탐색_상태로_돌아간다() throws Exception {
+        Path logs = logsDir();
+        // watcher 생성 이전부터 파일이 존재해 skipExisting=true가 되는 경로(첫 poll)에서
+        // findActiveLog가 경로를 반환한 직후, Files.size(offset 계산)가 호출되기 전에
+        // 파일이 사라지는 레이스를 결정적으로 재현
+        append(logs.resolve("app.log"), "기존 내용\n");
+        LogFileDiscoverer raceyDiscoverer = new LogFileDiscoverer(watchDir) {
+            @Override
+            public Optional<Path> findActiveLog() {
+                Optional<Path> found = super.findActiveLog();
+                found.ifPresent(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+                return found;
+            }
+        };
+        LogFileWatcher watcher = new LogFileWatcher(raceyDiscoverer);
+
+        assertTrue(watcher.poll().isEmpty()); // 최초 poll(skipExisting=true) 중 탐색 직후 삭제됨 → 예외 없이 빈 결과
+    }
 }
