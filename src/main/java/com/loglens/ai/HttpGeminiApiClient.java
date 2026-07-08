@@ -14,8 +14,9 @@ import java.nio.charset.StandardCharsets;
 
 public class HttpGeminiApiClient implements GeminiApiClient {
 
+    // gemini-2.0-flash는 프로젝트에 따라 무료 티어 할당량이 0으로 제한될 수 있어 gemini-2.5-flash로 변경
     private static final String ENDPOINT =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     private final HttpClient http = HttpClient.newHttpClient();
     private final String apiKey;
