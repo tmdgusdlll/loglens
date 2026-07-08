@@ -84,4 +84,20 @@ class LogFileWatcherTest {
         Files.writeString(log, "새 짧은 내용\n", StandardCharsets.UTF_8); // truncate 후 재작성
         assertEquals(Optional.of("새 짧은 내용\n"), watcher.poll());
     }
+
+    @Test
+    void 재작성된_내용이_기존과_동일한_크기여도_새_내용을_읽는다() throws Exception {
+        Path log = logsDir().resolve("app.log");
+        LogFileWatcher watcher = new LogFileWatcher(new LogFileDiscoverer(watchDir));
+        watcher.poll(); // 파일 없음
+
+        Files.writeString(log, "AAAAAAAAAA\n", StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(log, java.nio.file.attribute.FileTime.fromMillis(1_000));
+        assertEquals(Optional.of("AAAAAAAAAA\n"), watcher.poll());
+
+        // size < offset 분기로는 감지되지 않는, 동일 크기 재작성(데모 앱 재시작) — mtime으로만 구분 가능
+        Files.writeString(log, "BBBBBBBBBB\n", StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(log, java.nio.file.attribute.FileTime.fromMillis(2_000));
+        assertEquals(Optional.of("BBBBBBBBBB\n"), watcher.poll());
+    }
 }
