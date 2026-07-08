@@ -1,6 +1,7 @@
 package com.loglens.source;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -34,13 +35,14 @@ public class SourceContextResolver {
             fqcn = fqcn.substring(0, dollar); // 내부 클래스는 바깥 클래스 파일에 있음
         }
         String fileBase = m.group(2);
-        int lineNo = Integer.parseInt(m.group(3));
         if (!fqcn.endsWith("." + fileBase) && !fqcn.equals(fileBase)) {
             return Optional.empty();
         }
         Path relPath = Path.of(fqcn.replace('.', '/') + ".java");
 
         try (Stream<Path> walk = Files.walk(watchDir)) {
+            // 줄번호 자릿수는 정규식이 제한하지 않으므로 int 오버플로 가능성이 있어 try 안에서 처리한다.
+            int lineNo = Integer.parseInt(m.group(3));
             Optional<Path> file = walk
                     .filter(Files::isRegularFile)
                     .filter(p -> p.endsWith(relPath))
@@ -62,8 +64,9 @@ public class SourceContextResolver {
                         .append('\n');
             }
             return Optional.of(sb.toString());
-        } catch (IOException e) {
-            return Optional.empty(); // 읽기 실패 = 컨텍스트 없이 진행 (ADR 0010: 루프는 죽지 않는다)
+        } catch (IOException | UncheckedIOException | NumberFormatException e) {
+            // Files.walk는 지연 순회 중 하위 디렉토리 접근 실패 시 UncheckedIOException을 던진다.
+            return Optional.empty(); // 읽기/파싱 실패 = 컨텍스트 없이 진행 (ADR 0010: 루프는 죽지 않는다)
         }
     }
 }
