@@ -32,7 +32,12 @@ public class LogFileWatcher {
             }
             activeFile = found.get();
             offset = skipExisting ? Files.size(activeFile) : 0L;
-            lastModifiedTime = Files.getLastModifiedTime(activeFile); // 새로 발견한 파일의 mtime 기준선(이전 파일의 mtime이 새어들지 않게)
+            try {
+                lastModifiedTime = Files.getLastModifiedTime(activeFile); // 새로 발견한 파일의 mtime 기준선(이전 파일의 mtime이 새어들지 않게)
+            } catch (NoSuchFileException e) {
+                activeFile = null; // 탐색 직후 삭제됨 → 재탐색 상태로 복귀
+                return Optional.empty();
+            }
         }
         firstPoll = false;
 

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,5 +100,32 @@ class LogFileWatcherTest {
         Files.writeString(log, "BBBBBBBBBB\n", StandardCharsets.UTF_8);
         Files.setLastModifiedTime(log, java.nio.file.attribute.FileTime.fromMillis(2_000));
         assertEquals(Optional.of("BBBBBBBBBB\n"), watcher.poll());
+    }
+
+    @Test
+    void 탐색_직후_mtime_조회_전에_파일이_삭제되면_예외_없이_재탐색_상태로_돌아간다() throws Exception {
+        Path logs = logsDir();
+        // findActiveLog가 경로를 반환한 직후, LogFileWatcher가 mtime을 조회하기 전에
+        // 파일이 사라지는 레이스를 결정적으로 재현하기 위한 테스트 전용 discoverer
+        LogFileDiscoverer raceyDiscoverer = new LogFileDiscoverer(watchDir) {
+            @Override
+            public Optional<Path> findActiveLog() {
+                Optional<Path> found = super.findActiveLog();
+                found.ifPresent(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+                return found;
+            }
+        };
+        LogFileWatcher watcher = new LogFileWatcher(raceyDiscoverer);
+
+        assertTrue(watcher.poll().isEmpty()); // 파일 없음 → firstPoll 소진(이후 poll은 skipExisting=false 경로를 탐)
+
+        append(logs.resolve("app.log"), "내용\n");
+        assertTrue(watcher.poll().isEmpty()); // 탐색 성공 직후 삭제됨 → 예외 없이 빈 결과
     }
 }
