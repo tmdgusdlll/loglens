@@ -104,4 +104,31 @@ class StackTraceAggregatorTest {
         assertEquals(1, aggregator.flush().size());
         assertTrue(aggregator.flush().isEmpty());
     }
+
+    @Test
+    void CRLF_개행이어도_스택트레이스를_ErrorEvent로_묶는다() {
+        String crlfChunk = TRACE_CHUNK.replace("\n", "\r\n");
+
+        List<ErrorEvent> events = aggregator.accept(crlfChunk);
+
+        assertEquals(1, events.size());
+        ErrorEvent e = events.get(0);
+        assertEquals("java.lang.IllegalStateException", e.exceptionType());
+        assertEquals("com.example.demo.FooService.decrease(FooService.java:42)", e.location());
+        assertTrue(e.rawTrace().contains("FooController.order"));
+    }
+
+    @Test
+    void 개행_없이_끝난_마지막_줄도_flush로_트레이스에_포함된다() {
+        String withoutTrailingNewline = """
+                14:23:05.123 [main] ERROR c.e.demo.FooService - 실패
+                java.lang.NullPointerException: null
+                \tat com.example.demo.FooService.load(FooService.java:10)""";
+        assertTrue(aggregator.accept(withoutTrailingNewline).isEmpty());
+
+        List<ErrorEvent> flushed = aggregator.flush();
+        assertEquals(1, flushed.size());
+        assertEquals("java.lang.NullPointerException", flushed.get(0).exceptionType());
+        assertEquals("com.example.demo.FooService.load(FooService.java:10)", flushed.get(0).location());
+    }
 }

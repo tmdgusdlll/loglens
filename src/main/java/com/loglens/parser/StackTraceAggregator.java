@@ -41,17 +41,31 @@ public class StackTraceAggregator {
 
     public List<ErrorEvent> flush() {
         List<ErrorEvent> events = new ArrayList<>();
+        if (partialLine.length() > 0) {
+            // 개행 없이 끝난 마지막 줄도 버려지지 않도록 일반 줄과 동일하게 분류한다
+            onLine(partialLine.toString(), events);
+            partialLine.setLength(0);
+        }
         emitIfTrace(events);
         return events;
     }
 
-    private void onLine(String line, List<ErrorEvent> events) {
+    private void onLine(String rawLine, List<ErrorEvent> events) {
+        // CRLF 로그 파일 대응: 정규식이 "$" 앞에 남은 \r 때문에 매칭 실패하는 것을 방지
+        String line = stripTrailingCr(rawLine);
         if (LOG_LINE_START.matcher(line).find()) {
             // 새 로그 줄 = 직전 트레이스 블록의 끝
             emitIfTrace(events);
         } else if (!line.isBlank()) {
             block.add(line);
         }
+    }
+
+    private static String stripTrailingCr(String line) {
+        if (line.endsWith("\r")) {
+            return line.substring(0, line.length() - 1);
+        }
+        return line;
     }
 
     private void emitIfTrace(List<ErrorEvent> events) {
