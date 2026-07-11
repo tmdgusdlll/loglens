@@ -1,7 +1,7 @@
 # 0008. HTML 리포트 생성 트리거: 같은 프로세스 stdin 명령
 
 ## 상태
-확정됨
+대체됨(→ [0011](0011-report-file-history-preserved.md))
 
 ## 배경 (Context)
 에러 이력을 메모리 전용으로 저장하기로 했으므로([0007](0007-error-history-in-memory-only.md)), 누적 리포트를 별도 프로세스(`java -jar loglens.jar --report`)로 실행하면 빈 상태에서 시작해 아무 내용도 못 만든다. 리포트를 언제, 어떻게 트리거할지 재정의가 필요했다.

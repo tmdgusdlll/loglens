@@ -19,13 +19,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 public final class Main {
 
     static final long POLL_INTERVAL_MS = 300; // ADR 0002
+    private static final DateTimeFormatter REPORT_FILE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
     private Main() {
     }
@@ -57,19 +61,25 @@ public final class Main {
         LogFileWatcher watcher = new LogFileWatcher(new LogFileDiscoverer(config.watchDir()));
 
         HtmlReportGenerator reportGenerator = new HtmlReportGenerator();
+        Path reportDir = Path.of("reports");
+        Path reportPath = reportDir.resolve(
+                "loglens-report-" + REPORT_FILE_TIME.format(LocalDateTime.now(clock)) + ".html");
+        Runnable generateReport = () -> {
+            try {
+                Files.createDirectories(reportDir);
+                Path written = reportGenerator.generate(store.snapshot(), reportPath);
+                reporter.info("리포트 생성됨: " + written.toAbsolutePath());
+            } catch (IOException e) {
+                reporter.info("리포트 생성 실패: " + e.getMessage());
+            }
+        };
         Thread stdinThread = new Thread(new StdinCommandListener(
                 new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
-                () -> {
-                    try {
-                        Path written = reportGenerator.generate(store.snapshot(),
-                                Path.of("loglens-report.html"));
-                        reporter.info("리포트 생성됨: " + written.toAbsolutePath());
-                    } catch (IOException e) {
-                        reporter.info("리포트 생성 실패: " + e.getMessage());
-                    }
-                }), "loglens-stdin");
+                generateReport), "loglens-stdin");
         stdinThread.setDaemon(true); // 감시 루프 종료 시 함께 정리 (ADR 0008)
         stdinThread.start();
+        // 정상 종료 시(Ctrl+C 등) r을 안 눌렀어도 마지막 상태를 리포트로 남긴다 (ADR 0012)
+        Runtime.getRuntime().addShutdownHook(new Thread(generateReport, "loglens-shutdown-report"));
 
         reporter.info("loglens 감시 시작: " + config.watchDir().toAbsolutePath());
         reporter.info("리포트 생성: r + Enter");

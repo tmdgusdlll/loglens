@@ -20,6 +20,8 @@ loglens 개발 중 내려진 주요 설계 결정들을 기록한다. 하나의 
 | [0005](0005-hallucination-mitigation.md) | 환각(hallucination) 대응 전략 | 확정됨 |
 | [0006](0006-rate-limit-cooldown.md) | 일일 할당량 초과 시 쿨다운 처리 | 확정됨 |
 | [0007](0007-error-history-in-memory-only.md) | 에러 이력: 메모리 전용 저장 | 확정됨 |
-| [0008](0008-report-generation-trigger.md) | HTML 리포트 생성 트리거: 같은 프로세스 stdin 명령 | 확정됨 |
+| [0008](0008-report-generation-trigger.md) | HTML 리포트 생성 트리거: 같은 프로세스 stdin 명령 | 대체됨(→ 0011) |
 | [0009](0009-json-library-gson.md) | JSON 라이브러리: Gson | 확정됨 |
 | [0010](0010-project-structure-and-packages.md) | 프로젝트 구조 및 패키지 설계 | 확정됨 |
+| [0011](0011-report-file-history-preserved.md) | 리포트 파일명에 타임스탬프를 넣어 과거 리포트 보존 | 확정됨 |
+| [0012](0012-shutdown-hook-auto-report.md) | 정상 종료 시 shutdown hook으로 리포트 자동 생성 | 확정됨 |
