@@ -43,5 +43,5 @@ EOF
 
 ## 더 알아보기
 
-- 실행 화면 데모: `video/0712.mov`
+- 실행 화면 데모: [영상 보기](https://drive.google.com/file/d/1fyrg7b5UaKjIvKqtGaGVJgi21DDAYOnn/view?usp=drive_link)
 - 설계 배경과 트레이드오프: `docs/decisions/`의 ADR 0001~0012
